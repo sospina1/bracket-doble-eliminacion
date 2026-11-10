@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bracket Doble Eliminación</title>
+  <meta name="description" content="Generador de brackets de doble eliminación estilo CRL: escribe los jugadores, repártelos por seeding o al azar y registra los resultados.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div>
+        <h1>Bracket Doble Eliminación</h1>
+        <p class="sub">Upper, Lower y Gran Final con reinicio · de 4 a 64 jugadores</p>
+      </div>
+      <div class="top-actions" id="topActions" hidden>
+        <button class="btn ghost" id="btnEdit">Editar jugadores</button>
+        <button class="btn ghost" id="btnClear">Borrar resultados</button>
+        <button class="btn ghost" id="btnExport">Exportar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Configuración -->
+    <section class="card setup" id="setup">
+      <div class="setup-grid">
+        <div class="field players-field">
+          <label for="players">Jugadores <span class="hint">(uno por línea, en orden de seed si usas seeding)</span></label>
+          <textarea id="players" rows="14" spellcheck="false" placeholder="Jugador 1&#10;Jugador 2&#10;Jugador 3&#10;Jugador 4"></textarea>
+          <div class="count" id="count">0 jugadores</div>
+        </div>
+
+        <div class="options">
+          <div class="field">
+            <label for="bo">Series normales</label>
+            <select id="bo">
+              <option value="1">Mejor de 1</option>
+              <option value="3" selected>Mejor de 3</option>
+              <option value="5">Mejor de 5</option>
+              <option value="7">Mejor de 7</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="boFinal">Final Upper, Final Lower y Gran Final</label>
+            <select id="boFinal">
+              <option value="1">Mejor de 1</option>
+              <option value="3">Mejor de 3</option>
+              <option value="5" selected>Mejor de 5</option>
+              <option value="7">Mejor de 7</option>
+            </select>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="reset" checked>
+            <span>Reinicio de bracket si gana el que viene del Lower</span>
+          </label>
+
+          <div class="errors" id="errors" role="alert"></div>
+
+          <div class="gen-buttons">
+            <button class="btn primary" id="btnSeed">Generar por seeding</button>
+            <button class="btn" id="btnRandom">Sortear al azar</button>
+          </div>
+          <p class="hint small">Seeding: el 1.º se cruza con el último, y los dos mejores solo pueden verse en la final. Si el número no es potencia de 2, los mejores seeds pasan directo (BYE).</p>
+
+          <div class="extra-buttons">
+            <button class="link" id="btnBack" hidden>Volver al torneo actual</button>
+            <button class="link" id="btnSample">Cargar ejemplo (CRL 2026)</button>
+            <label class="link" for="importFile">Importar torneo (.json)</label>
+            <input type="file" id="importFile" accept="application/json,.json" hidden>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Torneo -->
+    <section id="tournament" hidden>
+      <div class="champion" id="champion" hidden></div>
+
+      <div class="toolbar">
+        <span class="meta" id="metaInfo"></span>
+        <label class="check">
+          <input type="checkbox" id="hideByes" checked>
+          <span>Ocultar partidas con BYE</span>
+        </label>
+      </div>
+
+      <div class="section-head"><h2>Upper Bracket</h2></div>
+      <div class="bracket-scroll"><div class="bracket" id="upper"></div></div>
+
+      <div class="section-head"><h2>Lower Bracket</h2></div>
+      <div class="bracket-scroll"><div class="bracket" id="lower"></div></div>
+
+      <div class="section-head"><h2>Gran Final</h2></div>
+      <div class="bracket-scroll"><div class="bracket" id="final"></div></div>
+
+      <div class="section-head"><h2>Clasificación</h2></div>
+      <div class="card standings" id="standings"></div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">Proyecto de código abierto · los datos se guardan solo en tu navegador.</footer>
+
+  <script src="bracket.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
