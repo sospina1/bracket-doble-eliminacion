@@ -1,9 +1,14 @@
-/* Interfaz del bracket. Depende de bracket.js (window.Bracket). */
+/* Interfaz del bracket. Depende de bracket.js (window.Bracket).
+ * Modo local: cada navegador guarda su propio torneo.
+ * Modo en línea (Firebase configurado): todos ven el mismo torneo y
+ * solo el administrador puede editarlo (ver nube.js).
+ */
 (function () {
   "use strict";
 
   var B = window.Bracket;
   var STORAGE_KEY = "bracket-doble-eliminacion:v1";
+  var cfg = window.FIREBASE_CONFIG;
 
   // Ejemplo: los 16 de la CRL 2026 en orden de seed para que el seeding
   // reproduzca exactamente los cruces de primera ronda del torneo real.
@@ -15,33 +20,111 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var els = {
-    setup: $("setup"), tournament: $("tournament"), topActions: $("topActions"),
+    setup: $("setup"), tournament: $("tournament"), topActions: $("topActions"), status: $("status"),
     players: $("players"), count: $("count"), errors: $("errors"),
     bo: $("bo"), boFinal: $("boFinal"), reset: $("reset"),
     upper: $("upper"), lower: $("lower"), final: $("final"),
     standings: $("standings"), champion: $("champion"), metaInfo: $("metaInfo"),
-    hideByes: $("hideByes"), importFile: $("importFile")
+    hideByes: $("hideByes"), importFile: $("importFile"), live: $("live"),
+    authArea: $("authArea"), btnLogin: $("btnLogin"), btnLogout: $("btnLogout"), adminBadge: $("adminBadge"),
+    loginModal: $("loginModal"), loginForm: $("loginForm"), loginEmail: $("loginEmail"),
+    loginPass: $("loginPass"), loginError: $("loginError"), loginSubmit: $("loginSubmit"),
+    toast: $("toast")
   };
 
-  var state = { t: null, raw: "", hideByes: true };
+  var state = {
+    t: null,
+    hideByes: true,
+    view: "auto",              // "setup" cuando el admin está editando jugadores
+    remote: !!(cfg && cfg.apiKey),
+    api: null,
+    loaded: false,
+    loadError: false,
+    user: null,
+    isAdmin: false
+  };
 
-  /* ---------- Guardado local (opcional, puede fallar) ---------- */
-  function save() {
+  function canEdit() { return !state.remote || state.isAdmin; }
+
+  /* ---------- Avisos ---------- */
+  var toastTimer = null;
+  function toast(msg, isError) {
+    els.toast.textContent = msg;
+    els.toast.className = "toast show" + (isError ? " error" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { els.toast.className = "toast"; }, isError ? 5000 : 2200);
+  }
+
+  /* ---------- Guardado ---------- */
+  function saveLocal() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        t: state.t, raw: els.players.value, hideByes: state.hideByes
-      }));
+      var data = { raw: els.players.value, hideByes: state.hideByes };
+      if (!state.remote) data.t = state.t;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) { /* sin almacenamiento: la página sigue funcionando */ }
   }
 
-  function load() {
+  function persist() {
+    saveLocal();
+    if (state.remote && state.isAdmin && state.api) {
+      state.api.save(state.t).catch(function (err) {
+        console.error(err);
+        toast("No se pudo guardar en la nube. Revisa tu conexión o tus permisos de administrador.", true);
+      });
+    }
+  }
+
+  function loadLocal() {
     try {
       var data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!data) return;
       els.players.value = data.raw || "";
       state.hideByes = data.hideByes !== false;
-      if (data.t && data.t.matches) state.t = data.t;
+      if (!state.remote && data.t && data.t.matches) state.t = data.t;
     } catch (e) { /* ignorar */ }
+  }
+
+  /* ---------- Vistas ---------- */
+  function showOnly(which) {
+    els.setup.hidden = which !== "setup";
+    els.tournament.hidden = which !== "tournament";
+    els.status.hidden = which !== "status";
+    els.topActions.hidden = !(which === "tournament" && canEdit());
+  }
+
+  function showStatus(title, text) {
+    els.status.innerHTML = "";
+    els.status.appendChild(el("h2", "card-title", title));
+    if (text) els.status.appendChild(el("p", "status-text", text));
+    showOnly("status");
+  }
+
+  function updateAuthUI() {
+    els.authArea.hidden = !state.remote;
+    els.btnLogin.hidden = !!state.isAdmin;
+    els.btnLogout.hidden = !state.isAdmin;
+    els.adminBadge.hidden = !state.isAdmin;
+    els.live.hidden = !state.remote;
+  }
+
+  function updateView() {
+    updateAuthUI();
+    if (state.remote && !state.loaded) {
+      if (state.loadError) showStatus("Sin conexión", "No se pudo cargar el torneo. Revisa tu internet y recarga la página.");
+      else showStatus("Cargando torneo…", "");
+      return;
+    }
+    if (canEdit() && (state.view === "setup" || !state.t)) {
+      showSetup();
+      return;
+    }
+    if (state.t) {
+      showOnly("tournament");
+      els.hideByes.checked = state.hideByes;
+      render();
+      return;
+    }
+    showStatus("El torneo aún no ha comenzado", "Cuando el administrador publique el bracket, aparecerá aquí automáticamente.");
   }
 
   /* ---------- Configuración ---------- */
@@ -62,6 +145,7 @@
   }
 
   function generate(mode) {
+    if (!canEdit()) return;
     var names = currentNames();
     var errors = B.validate(names);
     els.errors.textContent = errors.join("\n");
@@ -74,30 +158,22 @@
       boFinal: Number(els.boFinal.value),
       reset: els.reset.checked
     });
-    save();
-    showTournament();
+    state.view = "auto";
+    persist();
+    updateView();
+    window.scrollTo(0, 0);
   }
 
   function showSetup() {
-    els.setup.hidden = false;
-    els.tournament.hidden = true;
-    els.topActions.hidden = true;
+    showOnly("setup");
     $("btnBack").hidden = !state.t;
     if (state.t) {
+      if (!els.players.value.trim()) els.players.value = state.t.players.join("\n");
       els.bo.value = String(state.t.settings.bo);
       els.boFinal.value = String(state.t.settings.boFinal);
       els.reset.checked = state.t.settings.reset;
     }
     updateCount();
-  }
-
-  function showTournament() {
-    els.setup.hidden = true;
-    els.tournament.hidden = false;
-    els.topActions.hidden = false;
-    els.hideByes.checked = state.hideByes;
-    render();
-    window.scrollTo(0, 0);
   }
 
   /* ---------- Render del bracket ---------- */
@@ -168,11 +244,11 @@
   function originText(slot, numbers) {
     if (slot.type === "winner") return "Ganador de #" + numbers[slot.match];
     if (slot.type === "loser") return "Perdedor de #" + numbers[slot.match];
-    if (slot.type === "gf") return "Por definir";
     return "Por definir";
   }
 
   function renderMatch(m, st, numbers) {
+    var editable = canEdit();
     var card = el("div", "match");
     var ready = !st.done && st.a !== null && st.b !== null;
     if (st.bye) card.classList.add("bye");
@@ -181,7 +257,9 @@
     var head = el("div", "match-head");
     head.appendChild(el("span", "", "#" + numbers[m.id]));
     var hasBye = st.bye || st.a === B.BYE || st.b === B.BYE;
-    head.appendChild(el("span", "", hasBye ? "Pase directo" : "Bo" + m.bo));
+    var headRight = hasBye ? "Pase directo" : "Bo" + m.bo;
+    if (!editable && ready) headRight = "Por jugar · Bo" + m.bo;
+    head.appendChild(el("span", "", headRight));
     card.appendChild(head);
 
     ["a", "b"].forEach(function (side, idx) {
@@ -202,7 +280,8 @@
       card.appendChild(row);
     });
 
-    if (!st.bye && st.a !== null && st.b !== null) {
+    // Solo quien puede editar ve el selector de resultado
+    if (editable && !st.bye && st.a !== null && st.b !== null) {
       var sel = el("select");
       sel.setAttribute("aria-label", "Resultado de la partida " + numbers[m.id]);
       sel.appendChild(new Option(st.done ? "Quitar resultado" : "Elegir resultado…", ""));
@@ -213,9 +292,10 @@
         sel.appendChild(opt);
       });
       sel.addEventListener("change", function () {
+        if (!canEdit()) return;
         var val = sel.value;
         B.setScore(state.t, m.id, val ? val.split("-").map(Number) : null);
-        save();
+        persist();
         render();
       });
       card.appendChild(sel);
@@ -249,7 +329,7 @@
     });
   }
 
-  // Resaltar a un jugador en todo el bracket al pasar el cursor
+  // Resaltar a un jugador en todo el bracket al pasar el cursor o tocarlo
   function highlight(p) {
     document.querySelectorAll(".slot.hl").forEach(function (n) { n.classList.remove("hl"); });
     if (p === null) return;
@@ -269,6 +349,7 @@
   }
 
   function importJson(file) {
+    if (!canEdit()) return;
     var reader = new FileReader();
     reader.onload = function () {
       try {
@@ -276,9 +357,10 @@
         if (!t || !Array.isArray(t.players) || !Array.isArray(t.matches) || !t.scores) throw new Error();
         B.compute(t); // valida que la estructura funcione
         state.t = t;
+        state.view = "auto";
         els.players.value = t.players.join("\n");
-        save();
-        showTournament();
+        persist();
+        updateView();
       } catch (e) {
         els.errors.textContent = "El archivo no es un torneo válido.";
       }
@@ -286,8 +368,56 @@
     reader.readAsText(file);
   }
 
+  /* ---------- Acceso de administrador ---------- */
+  function openLogin() {
+    els.loginError.textContent = "";
+    els.loginPass.value = "";
+    els.loginModal.hidden = false;
+    setTimeout(function () { els.loginEmail.focus(); }, 50);
+  }
+  function closeLogin() { els.loginModal.hidden = true; }
+
+  function loginErrorText(err) {
+    var code = (err && err.code) || "";
+    if (code.indexOf("invalid") !== -1 || code.indexOf("wrong-password") !== -1 || code.indexOf("user-not-found") !== -1)
+      return "Correo o contraseña incorrectos.";
+    if (code.indexOf("too-many-requests") !== -1) return "Demasiados intentos. Espera unos minutos.";
+    if (code.indexOf("network") !== -1) return "Sin conexión a internet.";
+    return "No se pudo iniciar sesión.";
+  }
+
+  /* ---------- Conexión con la nube (la llama nube.js) ---------- */
+  window.BracketApp = {
+    connect: function (api) {
+      state.api = api;
+      api.onAuth(function (user) {
+        state.user = user;
+        state.isAdmin = !!user && (!api.adminUid || user.uid === api.adminUid);
+        if (user && !state.isAdmin) {
+          toast("Esta cuenta no es la del administrador.", true);
+          api.logout();
+        }
+        if (!state.isAdmin) state.view = "auto";
+        updateView();
+      });
+      api.onTournament(function (t, err) {
+        if (err) {
+          console.error(err);
+          if (!state.loaded) { state.loadError = true; updateView(); }
+          return;
+        }
+        state.t = t;
+        state.loaded = true;
+        state.loadError = false;
+        // Si el admin está escribiendo jugadores, no le cambiamos la pantalla
+        if (canEdit() && state.view === "setup") return;
+        updateView();
+      });
+    }
+  };
+
   /* ---------- Eventos ---------- */
-  els.players.addEventListener("input", function () { updateCount(); save(); });
+  els.players.addEventListener("input", function () { updateCount(); saveLocal(); });
   $("btnSeed").addEventListener("click", function () { generate("seed"); });
   $("btnRandom").addEventListener("click", function () { generate("random"); });
   $("btnSample").addEventListener("click", function () {
@@ -296,13 +426,22 @@
     els.boFinal.value = "5";
     els.reset.checked = true;
     updateCount();
+    saveLocal();
   });
-  $("btnEdit").addEventListener("click", showSetup);
-  $("btnBack").addEventListener("click", showTournament);
+  $("btnEdit").addEventListener("click", function () {
+    if (!canEdit()) return;
+    state.view = "setup";
+    updateView();
+  });
+  $("btnBack").addEventListener("click", function () {
+    state.view = "auto";
+    updateView();
+  });
   $("btnClear").addEventListener("click", function () {
+    if (!canEdit()) return;
     if (!confirm("¿Borrar todos los resultados? Los cruces se mantienen.")) return;
     state.t.scores = {};
-    save();
+    persist();
     render();
   });
   $("btnExport").addEventListener("click", exportJson);
@@ -312,7 +451,7 @@
   });
   els.hideByes.addEventListener("change", function () {
     state.hideByes = els.hideByes.checked;
-    save();
+    saveLocal();
     render();
   });
   els.tournament.addEventListener("mouseover", function (e) {
@@ -321,7 +460,29 @@
   });
   els.tournament.addEventListener("mouseleave", function () { highlight(null); });
 
+  els.btnLogin.addEventListener("click", openLogin);
+  $("loginCancel").addEventListener("click", closeLogin);
+  els.loginModal.addEventListener("click", function (e) { if (e.target === els.loginModal) closeLogin(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !els.loginModal.hidden) closeLogin(); });
+  els.loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!state.api) { els.loginError.textContent = "Todavía conectando, intenta de nuevo."; return; }
+    els.loginError.textContent = "";
+    els.loginSubmit.disabled = true;
+    state.api.login(els.loginEmail.value.trim(), els.loginPass.value)
+      .then(function () {
+        els.loginPass.value = "";
+        closeLogin();
+        toast("Modo administrador activado");
+      })
+      .catch(function (err) { els.loginError.textContent = loginErrorText(err); })
+      .then(function () { els.loginSubmit.disabled = false; });
+  });
+  els.btnLogout.addEventListener("click", function () {
+    if (state.api) state.api.logout().then(function () { toast("Sesión cerrada"); });
+  });
+
   /* ---------- Inicio ---------- */
-  load();
-  if (state.t) showTournament(); else showSetup();
+  loadLocal();
+  updateView();
 })();

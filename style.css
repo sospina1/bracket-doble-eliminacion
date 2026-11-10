@@ -309,6 +309,61 @@ option { background: var(--panel-solid); color: var(--text); }
 
 .foot { color: var(--muted); font-size: .9rem; padding-top: 34px; padding-bottom: calc(30px + env(safe-area-inset-bottom)); text-align: center; }
 
+/* Administrador, mensajes y avisos */
+.top-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.auth-area { display: flex; align-items: center; gap: 8px; }
+.admin-badge {
+  font: 400 .95rem/1 var(--title-font); letter-spacing: .06em; text-transform: uppercase;
+  color: #2a0602; padding: 8px 12px; border-radius: 999px;
+  background: linear-gradient(180deg, #ffe08a, #ff8a2a);
+  box-shadow: 0 0 14px rgba(255, 140, 40, .6);
+}
+.btn.lock::before {
+  content: ""; display: inline-block; width: 12px; height: 14px; margin-right: 7px; vertical-align: -2px;
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2h1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm1.5 0h3V4a1.5 1.5 0 0 0-3 0z'/%3E%3C/svg%3E");
+          mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2h1a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm1.5 0h3V4a1.5 1.5 0 0 0-3 0z'/%3E%3C/svg%3E");
+}
+
+.status { margin-top: clamp(24px, 34vh, 340px); text-align: center; padding: 28px 20px; }
+.status .card-title { margin-bottom: 8px; }
+.status-text { margin: 0; color: var(--muted); font-size: 1.05rem; }
+
+.live {
+  display: inline-flex; align-items: center; gap: 6px; margin-right: 10px;
+  font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; color: #ff6b5a;
+}
+.live::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff3b2f;
+  box-shadow: 0 0 8px #ff3b2f; animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 50% { opacity: .25; } }
+
+.modal {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(5, 1, 2, .72);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.modal-card { width: 100%; max-width: 400px; background: rgba(26, 7, 10, .96); border-color: var(--border-strong); }
+input[type="email"], input[type="password"] {
+  font: 600 16px/1.4 var(--body-font); color: var(--text); background: rgba(8, 2, 3, .85);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; width: 100%; min-height: 46px;
+}
+input[type="email"]:focus, input[type="password"]:focus { outline: 2px solid var(--fire); outline-offset: 1px; border-color: transparent; }
+.btn:disabled { opacity: .6; cursor: wait; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 60;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 12px;
+  font-weight: 700; text-align: center; color: #2a0602;
+  background: linear-gradient(180deg, #ffe08a, #ffb02e);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .6);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.error { color: #fff; background: linear-gradient(180deg, #d4302a, #8e1414); }
+
 [hidden] { display: none !important; }
 
 /* ---------- Celulares ---------- */
@@ -318,7 +373,10 @@ option { background: var(--panel-solid); color: var(--text); }
   .setup { margin-top: 30vh; }
   .top { position: static; }
   .top-inner { padding-top: 10px; padding-bottom: 10px; }
+  .top-right { width: 100%; justify-content: stretch; }
   .top-actions { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .auth-area { width: 100%; justify-content: flex-end; }
+  .status { margin-top: 30vh; }
   .top-actions .btn { padding: 8px 4px; font-size: .78rem; letter-spacing: .02em; }
   .gen-buttons .btn { flex: 1 1 100%; }
   textarea { min-height: 180px; }
