@@ -2,17 +2,31 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#120406">
   <title>Bracket Doble Eliminación</title>
   <meta name="description" content="Generador de brackets de doble eliminación estilo CRL: escribe los jugadores, repártelos por seeding o al azar y registra los resultados.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="bg" aria-hidden="true">
+    <div class="bg-blur"></div>
+    <div class="bg-art"></div>
+    <div class="bg-shade"></div>
+  </div>
+  <div class="embers" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
   <header class="top">
     <div class="wrap top-inner">
-      <div>
-        <h1>Bracket Doble Eliminación</h1>
-        <p class="sub">Upper, Lower y Gran Final con reinicio · de 4 a 64 jugadores</p>
+      <div class="brand">
+        <h1>Bracket <span>Doble Eliminación</span></h1>
+        <p class="sub">Upper · Lower · Gran Final con reinicio · de 4 a 64 jugadores</p>
       </div>
       <div class="top-actions" id="topActions" hidden>
         <button class="btn ghost" id="btnEdit">Editar jugadores</button>
@@ -25,10 +39,11 @@
   <main class="wrap">
     <!-- Configuración -->
     <section class="card setup" id="setup">
+      <h2 class="card-title">Arma tu torneo</h2>
       <div class="setup-grid">
         <div class="field players-field">
           <label for="players">Jugadores <span class="hint">(uno por línea, en orden de seed si usas seeding)</span></label>
-          <textarea id="players" rows="14" spellcheck="false" placeholder="Jugador 1&#10;Jugador 2&#10;Jugador 3&#10;Jugador 4"></textarea>
+          <textarea id="players" rows="12" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Jugador 1&#10;Jugador 2&#10;Jugador 3&#10;Jugador 4"></textarea>
           <div class="count" id="count">0 jugadores</div>
         </div>
 
@@ -78,6 +93,13 @@
     <section id="tournament" hidden>
       <div class="champion" id="champion" hidden></div>
 
+      <nav class="jump" aria-label="Secciones del torneo">
+        <a href="#sec-upper">Upper</a>
+        <a href="#sec-lower">Lower</a>
+        <a href="#sec-final">Gran Final</a>
+        <a href="#sec-standings">Clasificación</a>
+      </nav>
+
       <div class="toolbar">
         <span class="meta" id="metaInfo"></span>
         <label class="check">
@@ -86,16 +108,16 @@
         </label>
       </div>
 
-      <div class="section-head"><h2>Upper Bracket</h2></div>
+      <div class="section-head" id="sec-upper"><h2>Upper Bracket</h2><span class="swipe">Desliza →</span></div>
       <div class="bracket-scroll"><div class="bracket" id="upper"></div></div>
 
-      <div class="section-head"><h2>Lower Bracket</h2></div>
+      <div class="section-head" id="sec-lower"><h2>Lower Bracket</h2><span class="swipe">Desliza →</span></div>
       <div class="bracket-scroll"><div class="bracket" id="lower"></div></div>
 
-      <div class="section-head"><h2>Gran Final</h2></div>
+      <div class="section-head" id="sec-final"><h2>Gran Final</h2></div>
       <div class="bracket-scroll"><div class="bracket" id="final"></div></div>
 
-      <div class="section-head"><h2>Clasificación</h2></div>
+      <div class="section-head" id="sec-standings"><h2>Clasificación</h2></div>
       <div class="card standings" id="standings"></div>
     </section>
   </main>
