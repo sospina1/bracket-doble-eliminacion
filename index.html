@@ -30,7 +30,8 @@
       </div>
       <div class="top-right">
         <div class="top-actions" id="topActions" hidden>
-          <button class="btn ghost" id="btnEdit">Editar jugadores</button>
+          <button class="btn ghost" id="btnRename">Renombrar jugadores</button>
+          <button class="btn ghost" id="btnEdit">Rehacer bracket</button>
           <button class="btn ghost" id="btnClear">Borrar resultados</button>
           <button class="btn ghost" id="btnExport">Exportar</button>
         </div>
@@ -59,6 +60,20 @@
       <div class="gen-buttons">
         <button class="btn primary" type="submit" id="loginSubmit">Entrar</button>
         <button class="btn" type="button" id="loginCancel">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Renombrar jugadores sin tocar el bracket -->
+  <div class="modal" id="renameModal" hidden>
+    <form class="card modal-card rename-card" id="renameForm">
+      <h2 class="card-title">Renombrar jugadores</h2>
+      <p class="hint small">Solo cambian los nombres: los cruces y los resultados se mantienen igual.</p>
+      <div class="rename-list" id="renameList"></div>
+      <div class="errors" id="renameError" role="alert"></div>
+      <div class="gen-buttons">
+        <button class="btn primary" type="submit">Guardar nombres</button>
+        <button class="btn" type="button" id="renameCancel">Cancelar</button>
       </div>
     </form>
   </div>
@@ -154,7 +169,7 @@
     </section>
   </main>
 
-  <footer class="wrap foot">Proyecto de código abierto · los datos se guardan solo en tu navegador.</footer>
+  <footer class="wrap foot" id="foot">Proyecto de código abierto · los datos se guardan solo en tu navegador.</footer>
 
   <script src="firebase-config.js"></script>
   <script src="bracket.js"></script>

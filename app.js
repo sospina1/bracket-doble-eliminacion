@@ -368,6 +368,56 @@
     reader.readAsText(file);
   }
 
+  /* ---------- Renombrar jugadores (sin tocar cruces ni resultados) ---------- */
+  // Los cruces y marcadores usan la posición de cada jugador, no su nombre,
+  // así que basta con cambiar el texto en t.players.
+  function openRename() {
+    if (!canEdit() || !state.t) return;
+    var list = $("renameList");
+    list.innerHTML = "";
+    state.t.players.forEach(function (name, i) {
+      var row = el("label", "rename-row");
+      row.appendChild(el("span", "seed", String(i + 1)));
+      var input = el("input");
+      input.type = "text";
+      input.value = name;
+      input.dataset.i = String(i);
+      input.setAttribute("aria-label", "Nombre del jugador " + (i + 1));
+      input.autocomplete = "off";
+      row.appendChild(input);
+      list.appendChild(row);
+    });
+    $("renameError").textContent = "";
+    $("renameModal").hidden = false;
+  }
+  function closeRename() { $("renameModal").hidden = true; }
+
+  function saveRename(e) {
+    e.preventDefault();
+    if (!canEdit() || !state.t) return;
+    var inputs = $("renameList").querySelectorAll("input");
+    var names = [];
+    var seen = {};
+    var error = "";
+    inputs.forEach(function (input) {
+      var n = input.value.trim();
+      if (!n) error = error || "Ningún nombre puede quedar vacío.";
+      var key = n.toLowerCase();
+      if (n && seen[key]) error = error || "Nombre repetido: " + n;
+      seen[key] = true;
+      names.push(n);
+    });
+    if (error) { $("renameError").textContent = error; return; }
+    var changed = names.some(function (n, i) { return n !== state.t.players[i]; });
+    closeRename();
+    if (!changed) return;
+    state.t.players = names;
+    els.players.value = names.join("\n");
+    persist();
+    render();
+    toast("Nombres actualizados");
+  }
+
   /* ---------- Acceso de administrador ---------- */
   function openLogin() {
     els.loginError.textContent = "";
@@ -460,6 +510,12 @@
   });
   els.tournament.addEventListener("mouseleave", function () { highlight(null); });
 
+  $("btnRename").addEventListener("click", openRename);
+  $("renameCancel").addEventListener("click", closeRename);
+  $("renameForm").addEventListener("submit", saveRename);
+  $("renameModal").addEventListener("click", function (e) { if (e.target === $("renameModal")) closeRename(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("renameModal").hidden) closeRename(); });
+
   els.btnLogin.addEventListener("click", openLogin);
   $("loginCancel").addEventListener("click", closeLogin);
   els.loginModal.addEventListener("click", function (e) { if (e.target === els.loginModal) closeLogin(); });
@@ -483,6 +539,7 @@
   });
 
   /* ---------- Inicio ---------- */
+  if (state.remote) $("foot").textContent = "Proyecto de código abierto · el torneo se actualiza en vivo para todos.";
   loadLocal();
   updateView();
 })();
